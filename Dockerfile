@@ -1,17 +1,25 @@
-FROM ubuntu:22.04
+FROM python:3.12-slim
 
-USER root
-ENV DEBIAN_FRONTEND=noninteractive
-
+# System dependencies
 RUN apt-get update && apt-get install -y \
-    curl wget sudo ttyd qemu-system-x86 qemu-kvm \
+    unzip \
+    git \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -u 1000 user && echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# Create user (optional but safe)
+RUN useradd -m -u 1000 user
 USER user
 WORKDIR /home/user
 
-COPY --chown=user:user start.sh /home/user/start.sh
+# Copy all files from repo
+COPY --chown=user:user . /home/user/
+
+# Make start script executable
 RUN chmod +x /home/user/start.sh
 
+# Expose port for Render
+EXPOSE 10000
+
+# Start the script
 ENTRYPOINT ["/home/user/start.sh"]
