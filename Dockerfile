@@ -2,18 +2,16 @@ FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y \
     unzip \
-    git \
-    curl \
+    gcc \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -u 1000 user
-USER user
-WORKDIR /home/user
+WORKDIR /app
 
-COPY --chown=user:user . /home/user/
+COPY . /app/
 
-RUN chmod +x /home/user/start.sh
+RUN chmod +x start.sh
 
 EXPOSE 10000
 
-ENTRYPOINT ["/home/user/start.sh"]
+CMD ["./start.sh"]
