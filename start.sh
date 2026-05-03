@@ -1,64 +1,61 @@
 #!/bin/bash
 
 echo "===== AUTO SYSTEM START ====="
-echo "Current Path: $(pwd)"
+echo "Current Directory: $(pwd)"
 
-# Update and install basic tools
-sudo apt-get update && sudo apt-get install -y unzip curl
+# Install system dependencies
+apt-get update && apt-get install -y unzip gcc python3-dev
 
-# Setup directories
-mkdir -p mainepisode smilepost
-cd /home/user
-
-# ========================= VENV =========================
-echo "Creating Virtual Environment..."
-python3 -m venv venv
+# Setup venv
+python -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 
-# Install base libraries
+# Install libraries
+echo "Installing Pyrogram + dependencies..."
 pip install pyrogram tgcrypto motor python-dotenv
 
-# ========================= EXTRACT ZIPS =========================
-echo "Extracting mainepisode.zip..."
-unzip -o mainepisode.zip -d mainepisode
+# Extract zips
+echo "Extracting zips..."
+unzip -o mainepisode.zip
+unzip -o post.zip
 
-echo "Extracting post.zip..."
-unzip -o post.zip -d smilepost
+# Fix directory structure (important!)
+mv mainepisode/* ./ 2>/dev/null || true
+mv smilepost/* ./ 2>/dev/null || true
+mv post/* ./ 2>/dev/null || true
 
-# ========================= FIRST BOT =========================
+# Start First Bot
 echo "Starting Main Episode Bot..."
-cd mainepisode
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+cd mainepisode 2>/dev/null || cd . 
+if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+if [ -f "main.py" ]; then
+    python main.py &
+else
+    echo "❌ main.py not found!"
 fi
-python main.py &
-echo "Main bot started..."
 
-cd ..
-
-# ========================= SECOND BOT =========================
+# Start Second Bot
 echo "Starting Smilepost Bot..."
-cd smilepost
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+cd ../smilepost 2>/dev/null || cd . 
+if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+if [ -f "bot.py" ]; then
+    python bot.py &
+else
+    echo "❌ bot.py not found!"
 fi
-python bot.py &
-echo "Smilepost bot started..."
 
-cd ..
+echo "✅ Bots launched!"
 
-echo "✅ Both Bots Started Successfully!"
-
-# Keep Render happy (Port Binding)
-echo "Starting Keep-Alive Server..."
-python3 -c '
+# Keep alive
+echo "Starting Keep-Alive Server on port 10000..."
+python -c '
 import http.server
 import socketserver
 import os
 PORT = int(os.getenv("PORT", 10000))
 Handler = http.server.SimpleHTTPRequestHandler
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    print(f"Server running on port {PORT}")
+    print(f"Keep-alive server running on port {PORT}")
     httpd.serve_forever()
 '
