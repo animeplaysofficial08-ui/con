@@ -1,69 +1,57 @@
 #!/bin/bash
 
 echo "===== AUTO SYSTEM START ====="
-echo "Current Directory: $(pwd)"
+echo "Current Path: $(pwd)"
 
-# ========================= SYSTEM SETUP =========================
-echo "Installing system packages..."
-apt-get update && apt-get install -y unzip git curl
+# Update and install basic tools
+sudo apt-get update && sudo apt-get install -y unzip curl
 
-# ========================= WORKING DIRECTORY =========================
-mkdir -p /home/user/con
+# Setup directories
+mkdir -p mainepisode smilepost
 cd /home/user
 
-# ========================= VENV SETUP =========================
-echo "Setting up Python Virtual Environment..."
+# ========================= VENV =========================
+echo "Creating Virtual Environment..."
 python3 -m venv venv
 source venv/bin/activate
-pip install --upgrade pip setuptools wheel
+pip install --upgrade pip
 
-# ========================= PYTHON LIBRARIES =========================
-echo "Installing Python libraries..."
+# Install base libraries
 pip install pyrogram tgcrypto motor python-dotenv
 
-# ========================= CLONE / COPY PROJECT =========================
-echo "Setting up project..."
-cd /home/user/con
+# ========================= EXTRACT ZIPS =========================
+echo "Extracting mainepisode.zip..."
+unzip -o mainepisode.zip -d mainepisode
 
-# If zip files are in repo
-if [ -f "../mainepisode.zip" ]; then
-    echo "Extracting mainepisode.zip..."
-    unzip -o ../mainepisode.zip -d mainepisode
-else
-    echo "Warning: mainepisode.zip not found!"
-fi
+echo "Extracting post.zip..."
+unzip -o post.zip -d smilepost
 
-if [ -f "../smilepost.zip" ] || [ -f "../post.zip" ]; then
-    echo "Extracting smilepost/post.zip..."
-    unzip -o ../smilepost.zip -d smilepost 2>/dev/null || unzip -o ../post.zip -d smilepost
-fi
-
-# ========================= FIRST BOT (mainepisode) =========================
+# ========================= FIRST BOT =========================
 echo "Starting Main Episode Bot..."
-cd /home/user/con/mainepisode
+cd mainepisode
 if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
 fi
 python main.py &
-MAIN_BOT_PID=$!
-echo "Main bot started with PID: $MAIN_BOT_PID"
+echo "Main bot started..."
+
 cd ..
 
-# ========================= SECOND BOT (smilepost) =========================
+# ========================= SECOND BOT =========================
 echo "Starting Smilepost Bot..."
-cd /home/user/con/smilepost
+cd smilepost
 if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
 fi
 python bot.py &
-SMILE_BOT_PID=$!
-echo "Smilepost bot started with PID: $SMILE_BOT_PID"
+echo "Smilepost bot started..."
+
 cd ..
 
-echo "✅ Both bots launched successfully!"
+echo "✅ Both Bots Started Successfully!"
 
-# ========================= KEEP ALIVE FOR RENDER =========================
-echo "Starting Keep-Alive Server on port 10000..."
+# Keep Render happy (Port Binding)
+echo "Starting Keep-Alive Server..."
 python3 -c '
 import http.server
 import socketserver
@@ -71,6 +59,6 @@ import os
 PORT = int(os.getenv("PORT", 10000))
 Handler = http.server.SimpleHTTPRequestHandler
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    print(f"Keep-alive server running on http://0.0.0.0:{PORT}")
+    print(f"Server running on port {PORT}")
     httpd.serve_forever()
 '
