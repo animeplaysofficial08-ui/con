@@ -1,89 +1,76 @@
 #!/bin/bash
 
 echo "===== AUTO SYSTEM START ====="
+echo "Current Directory: $(pwd)"
 
-WORK_DIR="/home/user"
-PROJECT_DIR="/home/user/con"
+# ========================= SYSTEM SETUP =========================
+echo "Installing system packages..."
+apt-get update && apt-get install -y unzip git curl
 
-########################################
-# SYSTEM INSTALL
-########################################
+# ========================= WORKING DIRECTORY =========================
+mkdir -p /home/user/con
+cd /home/user
 
-sudo apt update
-sudo apt install -y git unzip python3 python3-pip python3-venv
-
-########################################
-# WORK DIR
-########################################
-
-cd $WORK_DIR
-
-########################################
-# VENV (NO CHANGE)
-########################################
-
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-fi
-
+# ========================= VENV SETUP =========================
+echo "Setting up Python Virtual Environment..."
+python3 -m venv venv
 source venv/bin/activate
+pip install --upgrade pip setuptools wheel
 
-sudo chown -R user:user $WORK_DIR/venv
+# ========================= PYTHON LIBRARIES =========================
+echo "Installing Python libraries..."
+pip install pyrogram tgcrypto motor python-dotenv
 
-python -m pip install --upgrade pip setuptools wheel
+# ========================= CLONE / COPY PROJECT =========================
+echo "Setting up project..."
+cd /home/user/con
 
-########################################
-# PYTHON LIBS (FIRST BOT)
-########################################
-
-pip install pyrogram tgcrypto motor
-
-########################################
-# CLONE PROJECT
-########################################
-
-if [ ! -d "$PROJECT_DIR" ]; then
-    git clone https://github.com/Demoaccount010/con.git
+# If zip files are in repo
+if [ -f "../mainepisode.zip" ]; then
+    echo "Extracting mainepisode.zip..."
+    unzip -o ../mainepisode.zip -d mainepisode
+else
+    echo "Warning: mainepisode.zip not found!"
 fi
 
-cd $PROJECT_DIR
+if [ -f "../smilepost.zip" ] || [ -f "../post.zip" ]; then
+    echo "Extracting smilepost/post.zip..."
+    unzip -o ../smilepost.zip -d smilepost 2>/dev/null || unzip -o ../post.zip -d smilepost
+fi
 
-########################################
-# FIRST BOT (NO CHANGE)
-########################################
-
-unzip -o mainepisode.zip
-
-cd mainepisode
-
-echo "Starting main episode bot..."
-
+# ========================= FIRST BOT (mainepisode) =========================
+echo "Starting Main Episode Bot..."
+cd /home/user/con/mainepisode
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+fi
 python main.py &
-
+MAIN_BOT_PID=$!
+echo "Main bot started with PID: $MAIN_BOT_PID"
 cd ..
 
-########################################
-# SECOND BOT ADD (NEW PART)
-########################################
-
-echo "Setting up second bot..."
-
-unzip -o post.zip
-
-cd smilepost
-
-pip install -r requirements.txt
-
-echo "Starting smilepost bot..."
-
+# ========================= SECOND BOT (smilepost) =========================
+echo "Starting Smilepost Bot..."
+cd /home/user/con/smilepost
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+fi
 python bot.py &
-
+SMILE_BOT_PID=$!
+echo "Smilepost bot started with PID: $SMILE_BOT_PID"
 cd ..
 
-########################################
-# WEB TERMINAL
-########################################
+echo "✅ Both bots launched successfully!"
 
-echo "Opening ttyd terminal..."
-
-ttyd -p 7860 bash
+# ========================= KEEP ALIVE FOR RENDER =========================
+echo "Starting Keep-Alive Server on port 10000..."
+python3 -c '
+import http.server
+import socketserver
+import os
+PORT = int(os.getenv("PORT", 10000))
+Handler = http.server.SimpleHTTPRequestHandler
+with socketserver.TCPServer(("", PORT), Handler) as httpd:
+    print(f"Keep-alive server running on http://0.0.0.0:{PORT}")
+    httpd.serve_forever()
+'
